@@ -8,7 +8,9 @@
 > [!WARNING]
 > This package is experimental. Its API and audit log format may change.
 
-kysely-audit is for developers who use Kysely and need to quickly assess which database records may have been exposed after a security breach. It produces structured audit logs for monitored tables, recording the IDs returned by queries and inferring candidate IDs from query conditions.
+kysely-audit helps application operations teams quickly assess which records may have been exposed in a data breach and make a preliminary disclosure. Incident investigation teams and security specialists should use other tools alongside kysely-audit to verify which records were actually exposed and prepare the final report.
+
+Agile teams can also use kysely-audit as a quality gate to catch and fix unauditable queries before release, making auditability a team habit and becoming **Auditable by Design**.
 
 ## Compatibility
 
