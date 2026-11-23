@@ -22,7 +22,7 @@ Works with common Kysely dialects. Audit logging is integration-tested with PGli
 
 These sample results compare a primary-key lookup in PGlite with and without auditing. Use them as a reference when choosing an audit mode. Results vary by workload and runtime.
 
-| Configuration | Queries/s | p50 (ms) | p99 (ms) | Unwrapped throughput | Audit log (bytes) |
+| Configuration | Queries/s | p50 (ms) | p99 (ms) | vs. no audit | Audit log (bytes) |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Unwrapped | 4,663 | 0.166 | 0.354 | 100.0% | 0 |
 | Standard | 4,202 | 0.190 | 0.478 | 90.1% | 121 |

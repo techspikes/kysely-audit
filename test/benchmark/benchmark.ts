@@ -147,7 +147,7 @@ test('direct Kysely primary-key audit benchmark', async t => {
   t.diagnostic(`Node.js ${process.version}, ${type()} ${release()} ${arch()}, ${cpus()[0]?.model ?? 'unknown CPU'}`)
   t.diagnostic(`${warmupQueries} warmup queries per configuration, ${rounds} rounds of ${queriesPerRound} measured queries`)
   t.diagnostic(`Audit log size includes all ${warmupQueries + rounds * queriesPerRound} queries and the standard mode's final flush.`)
-  t.diagnostic('| Configuration | Queries/s | p50 (ms) | p99 (ms) | Unwrapped throughput | Audit log (bytes) |')
+  t.diagnostic('| Configuration | Queries/s | p50 (ms) | p99 (ms) | Throughput vs. no audit | Audit log (bytes) |')
   t.diagnostic('| --- | ---: | ---: | ---: | ---: | ---: |')
 
   for (const { mode, samples, logBytes } of fixtures) {
