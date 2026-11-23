@@ -37,8 +37,7 @@ Run `npm run benchmark` to measure the same workload in your environment.
 Wrap the `Dialect` when creating your Kysely instance. This example uses an in-memory PGlite database.
 
 ```sh
-npm install @techspikes/kysely-audit 'kysely@>=0.29.8 <0.30.0' \
-  @electric-sql/pglite
+npm install @techspikes/kysely-audit 'kysely@>=0.29.8 <0.30.0' @electric-sql/pglite
 ```
 
 ```ts
@@ -63,7 +62,6 @@ const db = new Kysely<Database>({
 })
 
 try {
-
   await pglite.exec(`
     create table users (id integer primary key, name text not null)
   `)
@@ -157,10 +155,12 @@ Discovery supports PostgreSQL, PGlite, MySQL, and SQLite 3.37 or later. It ident
 
 Discovery treats text primary keys as UUIDs in `standard` (hyphenated) format by default. Pass `{ uuidFormat: 'short' }` or `{ uuidFormat: 'hex' }` as the third argument to use a different UUID format for all text keys discovered in that call. For ordinary text keys, set `keyType: 'string'` on the table configuration passed to `createAudit()`. Integer and native UUID keys are classified by their SQL types.
 
-For `events` and `orders` with hyphenated UUIDs stored as text, omit the format option.
+For `events` and `orders` with ShortUUIDs stored as text, specify `uuidFormat: 'short'`.
 
 ```ts
-const tables = await discoverAuditTables(catalogDb, ['events', 'orders'])
+const tables = await discoverAuditTables(catalogDb, ['events', 'orders'], {
+  uuidFormat: 'short',
+})
 
 const audit = createAudit({ tables })
 ```
@@ -254,19 +254,3 @@ observation carries `fails` if the stream failed.
 - The audit also observes statements that read as part of a write, such as statements with `RETURNING`. For those statements it can identify monitored tables and count the observation under `miss`.
 - Raw SQL is treated as opaque. Queries whose tables cannot be identified appear under `opaque`. For complex queries, the audit can still report known monitored tables with a `miss` count. With MySQL, bounds outside JavaScript's safe integer range can yield an unresolved observation because of conversion precision.
 - Audit events include monitored keys and range endpoints. SQL text, other parameter values, full rows, and database error messages are excluded. Configure access and retention for the log destination because it contains monitored keys. Log delivery failures are reported to `onAuditError` while the caller receives the original query result or error.
-
-## Development
-
-Development requires Node.js `^24.0.0 || ^26.0.0` and npm `>=10.9.3`.
-Run `npm run lint` to check JavaScript and TypeScript, or `npm run lint:fix`
-to apply automatic fixes.
-
-Run `npm ci` and `npm test` to type-check and run the tests. Tests and
-`npm run benchmark` load the TypeScript source directly. The c8 LCOV report is
-written to `coverage/lcov.info`.
-
-`tsconfig.json` type-checks the source, tests, benchmark, and ESLint config.
-Run `npm run build` before packing or publishing to emit the library and its
-type declarations into `dist/` using `tsconfig.build.json`.
-
-The suite includes in-memory PGlite integration tests, SQLite discovery tests with `node:sqlite` when available, and MySQL and SQLite compiler tests with test drivers. To run the concurrent-request OpenTelemetry test, install the optional dependency with `npm install --no-save @opentelemetry/api@1.9.0`.
