@@ -1,6 +1,7 @@
 # kysely-audit
 
 [![AI Generated | Codex](https://img.shields.io/badge/AI%20Generated-Codex-blue?style=flat)](https://shields.io/)
+[![Node.js CI](https://github.com/techspikes/kysely-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/techspikes/kysely-audit/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/techspikes/kysely-audit/branch/main/graph/badge.svg)](https://app.codecov.io/gh/techspikes/kysely-audit)
 [![neostandard javascript style](https://img.shields.io/badge/code_style-neostandard-brightgreen?style=flat)](https://github.com/neostandard/neostandard)
 [![npm version](https://img.shields.io/npm/v/%40techspikes/kysely-audit?style=flat)](https://www.npmjs.com/package/@techspikes/kysely-audit)
