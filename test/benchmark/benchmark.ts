@@ -16,6 +16,7 @@ type Fixture = {
   audit: Audit | null
   db: Kysely<Database> | null
   query: Query | null
+  logBytes: number
   samples: Awaited<ReturnType<typeof measure>>[]
 }
 const warmupQueries = 100
@@ -70,9 +71,6 @@ test('direct Kysely primary-key audit benchmark', async t => {
   const fixtures: Fixture[] = []
   const auditErrors: unknown[] = []
   const sink = openSync(devNull, 'w')
-  const writeAuditEvent = (event: AuditEvent) => {
-    writeFileSync(sink, JSON.stringify(event) + '\n')
-  }
 
   const onAuditError = (error: unknown) => {
     auditErrors.push(error)
@@ -93,7 +91,7 @@ test('direct Kysely primary-key audit benchmark', async t => {
 
   for (const mode of modes) {
     const pglite = new PGlite()
-    const fixture: Fixture = { mode, pglite, audit: null, db: null, query: null, samples: [] }
+    const fixture: Fixture = { mode, pglite, audit: null, db: null, query: null, logBytes: 0, samples: [] }
     fixtures.push(fixture)
 
     const dialect = new PGliteDialect({ pglite })
@@ -102,7 +100,11 @@ test('direct Kysely primary-key audit benchmark', async t => {
       fixture.audit = createAudit({
         ...(mode === 'detailed' && { mode }),
         tables: [{ table: 'items', key: 'id', keyType: 'integer' }],
-        writeAuditEvent,
+        writeAuditEvent (event: AuditEvent) {
+          const line = Buffer.from(JSON.stringify(event) + '\n', 'utf8')
+          writeFileSync(sink, line)
+          fixture.logBytes += line.length
+        },
         onAuditError,
       })
     }
@@ -144,15 +146,16 @@ test('direct Kysely primary-key audit benchmark', async t => {
   const baseline = median(fixtures[0].samples.map(sample => sample.queriesPerSecond))
   t.diagnostic(`Node.js ${process.version}, ${type()} ${release()} ${arch()}, ${cpus()[0]?.model ?? 'unknown CPU'}`)
   t.diagnostic(`${warmupQueries} warmup queries per configuration, ${rounds} rounds of ${queriesPerRound} measured queries`)
-  t.diagnostic('| Configuration | Queries/s | p50 (ms) | p99 (ms) | Unwrapped throughput |')
-  t.diagnostic('| --- | ---: | ---: | ---: | ---: |')
+  t.diagnostic(`Audit log size includes all ${warmupQueries + rounds * queriesPerRound} queries and the standard mode's final flush.`)
+  t.diagnostic('| Configuration | Queries/s | p50 (ms) | p99 (ms) | Unwrapped throughput | Audit log (bytes) |')
+  t.diagnostic('| --- | ---: | ---: | ---: | ---: | ---: |')
 
-  for (const { mode, samples } of fixtures) {
+  for (const { mode, samples, logBytes } of fixtures) {
     const rate = median(samples.map(sample => sample.queriesPerSecond))
     const p50 = median(samples.map(sample => sample.p50Ms))
     const p99 = median(samples.map(sample => sample.p99Ms))
     const relative = rate / baseline * 100
-    t.diagnostic(`| ${mode} | ${rate.toFixed(0)} | ${p50.toFixed(3)} | ${p99.toFixed(3)} | ${relative.toFixed(1)}% |`)
+    t.diagnostic(`| ${mode} | ${rate.toFixed(0)} | ${p50.toFixed(3)} | ${p99.toFixed(3)} | ${relative.toFixed(1)}% | ${logBytes} |`)
   }
 
   t.diagnostic(`Standard mode close and flush: ${flushMs.toFixed(3)} ms`)

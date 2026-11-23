@@ -22,13 +22,16 @@ Works with common Kysely dialects. Audit logging is integration-tested with PGli
 
 These sample results compare a primary-key lookup in PGlite with and without auditing. Use them as a reference when choosing an audit mode. Results vary by workload and runtime.
 
-| Configuration | Queries/s | p50 (ms) | p99 (ms) | Unwrapped throughput |
-| --- | ---: | ---: | ---: | ---: |
-| Unwrapped | 4,635 | 0.168 | 0.345 | 100.0% |
-| Standard | 3,973 | 0.203 | 0.526 | 85.7% |
-| Detailed | 4,079 | 0.200 | 0.438 | 88.0% |
+| Configuration | Queries/s | p50 (ms) | p99 (ms) | Unwrapped throughput | Audit log (bytes) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Unwrapped | 4,663 | 0.166 | 0.354 | 100.0% | 0 |
+| Standard | 4,202 | 0.190 | 0.478 | 90.1% | 121 |
+| Detailed | 3,980 | 0.207 | 0.483 | 85.3% | 229,315 |
 
-Measured with Node.js v24.22.3. Standard mode took 0.213 ms to close and flush.
+Values are arithmetic means across three benchmark runs on Node.js v24.22.3.
+Audit log size includes UTF-8 JSON lines for all 1,600 queries per run (100
+warmup and 1,500 timed), including the standard mode's final flush. Standard
+mode took 0.257 ms on average to close and flush.
 
 Run `npm run benchmark` to measure the same workload in your environment.
 
@@ -165,6 +168,36 @@ const tables = await discoverAuditTables(catalogDb, ['events', 'orders'], {
 const audit = createAudit({ tables })
 ```
 
+## Graceful shutdown
+
+On shutdown, stop accepting new work and wait for active queries and streams to
+finish. Then call `await audit.close()` before exiting. In `standard` mode, this
+flushes the final partial window immediately, even if fewer than 15 minutes have
+elapsed, and waits for pending audit callbacks. If a custom logger buffers
+writes, flush it after `audit.close()` completes. A forced termination can lose
+observations still held in memory.
+
+```ts
+import { promisify } from 'node:util'
+import closeWithGrace from 'close-with-grace'
+import express from 'express'
+
+// Create db and audit here as shown in the setup example.
+
+const app = express()
+const server = app.listen(3000)
+
+closeWithGrace({ delay: 10_000 }, async () => {
+  await promisify(server.close.bind(server))()
+
+  try {
+    await db.destroy()
+  } finally {
+    await audit.close()
+  }
+})
+```
+
 ## Reading audit logs
 
 ### Standard logs
@@ -215,8 +248,7 @@ Missing lists are empty, missing counters are zero, and missing `overflow`
 means false. Omitted `pred` and `bounds` have no value to report. Check
 `miss` for unresolved scope.
 
-Each process aggregates independently. `close()` flushes the partial window
-and waits for pending audit callbacks.
+Each process aggregates independently.
 
 ### Detailed logs
 
